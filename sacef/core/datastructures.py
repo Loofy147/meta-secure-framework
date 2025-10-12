@@ -9,6 +9,7 @@ class AttackVector(Enum):
     LOGIC_BYPASS = "logic_bypass"
     RESOURCE_EXHAUSTION = "resource_exhaustion"
     INJECTION = "injection"
+    CODE_INJECTION = "code_injection"
     META_VULNERABILITY = "meta_vulnerability"  # Vulnerabilities in the framework itself!
 
 
