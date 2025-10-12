@@ -1,6 +1,7 @@
 import random
 import time
 from typing import Callable, List, Dict, Any, Tuple, Optional
+from sacef.core.context import TargetFunctionContext
 
 class GeneticFuzzer:
     """Genetic fuzzer with self-attack protection."""
@@ -77,7 +78,7 @@ class GeneticFuzzer:
 
         return payload
 
-    def evaluate_fitness(self, payload: Any, target_func: Callable) -> float:
+    def evaluate_fitness(self, payload: Any, target_func: Callable, context: Optional[TargetFunctionContext] = None) -> float:
         """Evaluate fitness with timeout and safety."""
         if self.total_evaluations >= self.max_evaluations:
             return 0.0  # Stop if too many evaluations
@@ -127,22 +128,26 @@ class GeneticFuzzer:
                 except:
                     pass
 
-        except MemoryError:
-            fitness = 100
-        except (RecursionError, OverflowError):
-            fitness = 95
-        except ZeroDivisionError:
-            fitness = 60
-        except TypeError:
-            fitness = 55
-        except ValueError:
-            fitness = 50
-        except Exception:
-            fitness = 35
+        except Exception as e:
+            # Check if the exception is expected
+            if context and any(isinstance(e, exp_type) for exp_type in context.expected_exceptions):
+                fitness = 1  # Assign a very low score for expected exceptions
+            else:
+                # Score other exceptions based on their type
+                if isinstance(e, MemoryError):
+                    fitness = 100
+                elif isinstance(e, (RecursionError, OverflowError)):
+                    fitness = 95
+                elif isinstance(e, ZeroDivisionError):
+                    fitness = 60
+                elif isinstance(e, (TypeError, ValueError)):
+                    fitness = 5
+                else:
+                    fitness = 35
 
         return min(fitness, 100.0)
 
-    def evolve(self, target_func: Callable, generations: int = 5) -> List[Tuple[Any, float]]:
+    def evolve(self, target_func: Callable, context: Optional[TargetFunctionContext] = None, generations: int = 5) -> List[Tuple[Any, float]]:
         """Run genetic algorithm with safety limits."""
         generations = min(generations, 10)  # Limit generations
         population = self.initialize_population()
@@ -152,7 +157,7 @@ class GeneticFuzzer:
             fitness_scores = []
             for p in population:
                 try:
-                    f = self.evaluate_fitness(p, target_func)
+                    f = self.evaluate_fitness(p, target_func, context)
                     fitness_scores.append((p, f))
                 except:
                     fitness_scores.append((p, 0))

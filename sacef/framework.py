@@ -1,6 +1,7 @@
 import time
 from typing import Callable, Dict
 
+from sacef.core.context import TargetFunctionContext
 from sacef.core.datastructures import Vulnerability, AttackVector, SeverityLevel
 from sacef.modules.genetic_fuzzer import GeneticFuzzer
 from sacef.modules.symbolic_path_explorer import SymbolicPathExplorer
@@ -22,7 +23,7 @@ class SelfAdversarialFramework:
         self.vulnerabilities = []
         self.test_results = []
 
-    def analyze_function(self, func: Callable, verbose: bool = True) -> Dict:
+    def analyze_function(self, func: Callable, context: TargetFunctionContext = None, verbose: bool = True) -> Dict:
         """Analyze a function."""
         if verbose:
             print(f"\n{'='*70}")
@@ -46,7 +47,7 @@ class SelfAdversarialFramework:
             # Genetic Fuzzing
             if verbose:
                 print("\n[2/4] 🧬 Genetic Fuzzing")
-            evolved = self.genetic_fuzzer.evolve(func, generations=3)
+            evolved = self.genetic_fuzzer.evolve(func, context=context, generations=3)
             stats['attacks_found'] = len(evolved)
             if verbose:
                 print(f"  Found {len(evolved)} attacks")
@@ -75,7 +76,7 @@ class SelfAdversarialFramework:
             if verbose:
                 print("\n[4/4] ⚛️  Quantum Testing")
             superposition = self.quantum_tester.create_input_superposition([int, str, type(None)])
-            collapsed = self.quantum_tester.collapse_superposition(func, superposition)
+            collapsed = self.quantum_tester.collapse_superposition(func, superposition, context=context)
             if verbose:
                 print(f"  {len(collapsed)} states collapsed")
 
