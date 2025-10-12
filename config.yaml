@@ -1,0 +1,13 @@
+# Configuration for the Self-Adversarial Code Evolution Framework (SACEF)
+
+genetic_fuzzer:
+  population_size: 30
+  mutation_rate: 0.3
+  max_evaluations: 10000
+
+ml_predictor:
+  weights:
+    complexity: 0.3
+    loops: 0.2
+    dangerous_calls: 0.5
+    cyclomatic_complexity: 0.4

@@ -18,7 +18,8 @@ def run_comprehensive_tests():
     # TEST 1: Basic functionality
     def test_genetic_fuzzer_basics():
         """Test that genetic fuzzer can find vulnerabilities."""
-        fuzzer = GeneticFuzzer(population_size=20)
+        fuzzer_config = {'population_size': 20}
+        fuzzer = GeneticFuzzer(config=fuzzer_config)
 
         def vuln_func(x):
             return x * 10**9

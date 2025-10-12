@@ -5,6 +5,7 @@ from collections import defaultdict
 from sacef.framework import SelfAdversarialFramework
 from tests.test_framework import run_comprehensive_tests
 from tests.target_functions import vulnerable_multiply, vulnerable_auth, safe_function
+from utils.config_loader import load_config
 
 
 def main():
@@ -21,12 +22,15 @@ def main():
 
     test_runner = run_comprehensive_tests()
 
+    # Load configuration
+    config = load_config()
+
     # PHASE 2: Self-attack (framework attacks itself)
     print("\n\n" + "=" * 70)
     print("PHASE 2: SELF-ATTACK MODE")
     print("=" * 70)
 
-    framework = SelfAdversarialFramework()
+    framework = SelfAdversarialFramework(config)
     meta_vulns = framework.self_attacker.run_full_self_attack()
 
     if meta_vulns:

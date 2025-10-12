@@ -6,13 +6,17 @@ from sacef.core.context import TargetFunctionContext
 class GeneticFuzzer:
     """Genetic fuzzer with self-attack protection."""
 
-    def __init__(self, population_size=30, mutation_rate=0.3):
-        self.population_size = max(5, min(population_size, 100))  # Bounds check
-        self.mutation_rate = max(0.0, min(mutation_rate, 1.0))  # Bounds check
+    def __init__(self, config: Dict[str, Any] = None):
+        if config is None:
+            config = {}
+
+        self.population_size = max(5, min(config.get('population_size', 30), 100))
+        self.mutation_rate = max(0.0, min(config.get('mutation_rate', 0.3), 1.0))
+        self.max_evaluations = config.get('max_evaluations', 10000)
+
         self.generation = 0
         self.best_attacks = []
         self.total_evaluations = 0
-        self.max_evaluations = 10000  # Prevent infinite loops
 
     def initialize_population(self) -> List[Any]:
         """Create diverse initial population with safety checks."""

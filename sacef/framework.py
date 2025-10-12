@@ -1,5 +1,5 @@
 import time
-from typing import Callable, Dict
+from typing import Callable, Dict, Any
 
 from sacef.core.context import TargetFunctionContext
 from sacef.core.datastructures import Vulnerability, AttackVector, SeverityLevel
@@ -13,11 +13,14 @@ from sacef.self_attack import SelfAttackModule
 class SelfAdversarialFramework:
     """Framework with self-testing capabilities."""
 
-    def __init__(self):
-        self.genetic_fuzzer = GeneticFuzzer()
+    def __init__(self, config: Dict[str, Any] = None):
+        if config is None:
+            config = {}
+
+        self.genetic_fuzzer = GeneticFuzzer(config.get('genetic_fuzzer'))
         self.symbolic_explorer = SymbolicPathExplorer()
         self.quantum_tester = QuantumSuperpositionTester()
-        self.ml_predictor = MLVulnerabilityPredictor()
+        self.ml_predictor = MLVulnerabilityPredictor(config.get('ml_predictor'))
         self.self_attacker = SelfAttackModule(self)
 
         self.vulnerabilities = []
