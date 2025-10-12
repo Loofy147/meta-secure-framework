@@ -1,3 +1,4 @@
+from sacef.core.context import TargetFunctionContext
 from sacef.framework import SelfAdversarialFramework
 from sacef.modules.genetic_fuzzer import GeneticFuzzer
 from sacef.modules.ml_vulnerability_predictor import MLVulnerabilityPredictor
@@ -147,8 +148,11 @@ def run_comprehensive_tests():
         """Test that safe functions have fewer vulnerabilities."""
         framework = SelfAdversarialFramework()
 
+        # Context for the safe function
+        safe_context = TargetFunctionContext(expected_exceptions=[TypeError, ValueError])
+
         result_vuln = framework.analyze_function(vulnerable_multiply, verbose=False)
-        result_safe = framework.analyze_function(safe_function, verbose=False)
+        result_safe = framework.analyze_function(safe_function, context=safe_context, verbose=False)
 
         # Safe function should have fewer or equal vulnerabilities
         is_discriminating = result_safe['vulnerabilities'] <= result_vuln['vulnerabilities']
