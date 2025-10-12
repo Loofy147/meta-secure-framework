@@ -57,8 +57,14 @@ class SelfAdversarialFramework:
 
             for payload, fitness in evolved:
                 if fitness > 40:
+                    attack_vector = AttackVector.LOGIC_BYPASS
+                    if fitness > 90:
+                        attack_vector = AttackVector.CODE_INJECTION
+                    elif fitness > 60:
+                        attack_vector = AttackVector.OVERFLOW
+
                     vuln = Vulnerability(
-                        attack_vector=AttackVector.OVERFLOW if fitness > 60 else AttackVector.LOGIC_BYPASS,
+                        attack_vector=attack_vector,
                         severity=min(fitness / 100.0, 0.95),
                         severity_level=SeverityLevel.CRITICAL,
                         exploit_code=f"Payload: {repr(payload)[:60]}",

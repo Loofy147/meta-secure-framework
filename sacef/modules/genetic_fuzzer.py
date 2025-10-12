@@ -13,6 +13,13 @@ class GeneticFuzzer:
         self.population_size = max(5, min(config.get('population_size', 30), 100))
         self.mutation_rate = max(0.0, min(config.get('mutation_rate', 0.3), 1.0))
         self.max_evaluations = config.get('max_evaluations', 10000)
+        self.code_injection_payloads = [
+            "'SACEF_CODE_INJECTION_SUCCESS'",
+            "__import__('os').system('echo hello')",
+            "eval('1+1')",
+            "exec('a=1')",
+            "[c for c in ().__class__.__base__.__subclasses__() if c.__name__ == 'BuiltinImporter'][0]().load_module('os').system('echo SACEF_TEST')",
+        ]
 
         self.generation = 0
         self.best_attacks = []
@@ -28,6 +35,7 @@ class GeneticFuzzer:
             "' OR '1'='1", "; DROP TABLE",
             [], [1], {}, None, True, False
         ]
+        seeds.extend(self.code_injection_payloads)
 
         population = seeds[:self.population_size]
 
@@ -68,7 +76,10 @@ class GeneticFuzzer:
                     payload * 2 if len(payload) < 50 else payload,
                     payload + "\x00",
                     payload.upper() if payload else "X",
-                    ""
+                    "",
+                    f"eval({repr(payload)})",
+                    f"exec({repr(payload)})",
+                    random.choice(self.code_injection_payloads),
                 ])
 
             elif isinstance(payload, list):
@@ -132,6 +143,18 @@ class GeneticFuzzer:
                 except:
                     pass
 
+            # Code injection checks
+            if isinstance(payload, str) and ("eval" in payload or "exec" in payload or "import" in payload):
+                if result == "SACEF_CODE_INJECTION_SUCCESS":
+                    fitness = 100
+                elif isinstance(result, (int, float)) and payload.count('+') > 0:
+                    try:
+                        # If '1+1' becomes 2, it's a strong indicator
+                        expected = eval(payload, {'__builtins__': {}}, {})
+                        if result == expected:
+                            fitness = 95
+                    except:
+                        pass
         except Exception as e:
             # Check if the exception is expected
             if context and any(isinstance(e, exp_type) for exp_type in context.expected_exceptions):

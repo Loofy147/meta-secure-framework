@@ -16,3 +16,18 @@ def safe_function(x):
     if abs(x) > 1000:
         raise ValueError("Out of bounds")
     return x * 2
+
+def vulnerable_code_injection(user_input: str):
+    """
+    Vulnerable to code injection.
+    A payload like "1+1" will be executed.
+    """
+    if not isinstance(user_input, str):
+        return "Invalid input"
+
+    try:
+        # This is the vulnerability
+        result = eval(user_input, {'__builtins__': {}}, {})
+        return result
+    except Exception:
+        return "Execution failed"

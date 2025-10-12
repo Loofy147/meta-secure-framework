@@ -4,7 +4,7 @@ from collections import defaultdict
 
 from sacef.framework import SelfAdversarialFramework
 from tests.test_framework import run_comprehensive_tests
-from tests.target_functions import vulnerable_multiply, vulnerable_auth, safe_function
+from tests.target_functions import vulnerable_multiply, vulnerable_auth, safe_function, vulnerable_code_injection
 from utils.config_loader import load_config
 
 
@@ -51,6 +51,7 @@ def main():
         ("Integer Overflow", vulnerable_multiply),
         ("Authentication Bypass", vulnerable_auth),
         ("Safe Function", safe_function),
+        ("Code Injection", vulnerable_code_injection),
     ]
 
     for test_name, func in test_functions:
