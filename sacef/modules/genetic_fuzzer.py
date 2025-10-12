@@ -24,6 +24,18 @@ class GeneticFuzzer:
         self.generation = 0
         self.best_attacks = []
         self.total_evaluations = 0
+        self.population = []
+
+    def reset(self):
+        """Resets the fuzzer's state for a new analysis run."""
+        self.generation = 0
+        self.best_attacks = []
+        self.total_evaluations = 0
+        self.population = []
+
+    def add_to_population(self, new_members: List[Any]):
+        """Adds new members to the current population."""
+        self.population.extend(new_members)
 
     def initialize_population(self) -> List[Any]:
         """Create diverse initial population with safety checks."""
@@ -177,12 +189,13 @@ class GeneticFuzzer:
     def evolve(self, target_func: Callable, context: Optional[TargetFunctionContext] = None, generations: int = 5) -> List[Tuple[Any, float]]:
         """Run genetic algorithm with safety limits."""
         generations = min(generations, 10)  # Limit generations
-        population = self.initialize_population()
+        if not self.population:
+            self.population = self.initialize_population()
 
         for gen in range(generations):
             # Evaluate all
             fitness_scores = []
-            for p in population:
+            for p in self.population:
                 try:
                     f = self.evaluate_fitness(p, target_func, context)
                     fitness_scores.append((p, f))

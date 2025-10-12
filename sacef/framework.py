@@ -33,6 +33,9 @@ class SelfAdversarialFramework:
             print(f"🔍 Analyzing: {func.__name__}")
             print(f"{'='*70}")
 
+        # Reset the fuzzer's state for the new analysis
+        self.genetic_fuzzer.reset()
+
         vulns = []
         stats = {}
         start = time.time()
@@ -47,9 +50,41 @@ class SelfAdversarialFramework:
             if verbose:
                 print(f"  Predicted risk: {predicted:.1%}")
 
-            # Genetic Fuzzing
+            # Hybrid Fuzzing Loop (Concolic Execution)
             if verbose:
-                print("\n[2/4] 🧬 Genetic Fuzzing")
+                print("\n[2/4] 🧬 Hybrid Fuzzing (Concolic Execution)")
+
+            try:
+                # Initial fuzzing to get interesting seeds
+                initial_population = self.genetic_fuzzer.initialize_population()
+
+                # Use the most promising seed for concolic exploration
+                # We iterate through seeds because some types may not be compatible with the function signature
+                import inspect
+                arg_names = inspect.getfullargspec(func).args
+                new_inputs = None
+
+                for seed in initial_population:
+                    seed_input = [seed] * len(arg_names) if arg_names else []
+                    try:
+                        new_inputs = self.symbolic_explorer.explore_path(func, seed_input)
+                        if new_inputs or not arg_names:
+                            # Found a valid path or function has no args, so we can stop searching for a seed
+                            break
+                    except TypeError:
+                        # This seed type is not compatible, try the next one
+                        continue
+
+                if new_inputs:
+                    if verbose:
+                        print(f"  Concolic engine found new input: {new_inputs}")
+                    # Add the new, path-aware input to the fuzzer's population
+                    self.genetic_fuzzer.add_to_population(new_inputs)
+            except Exception as e:
+                if verbose:
+                    print(f"  ⚠️ Concolic exploration failed: {e}")
+
+            # Run the genetic fuzzer with the (potentially) enriched population
             evolved = self.genetic_fuzzer.evolve(func, context=context, generations=3)
             stats['attacks_found'] = len(evolved)
             if verbose:
@@ -73,13 +108,6 @@ class SelfAdversarialFramework:
                         patch_suggestions=["Add validation"]
                     )
                     vulns.append(vuln)
-
-            # Symbolic Execution
-            if verbose:
-                print("\n[3/4] 🔮 Symbolic Execution")
-            paths = self.symbolic_explorer.explore_paths(func)
-            if verbose:
-                print(f"  Explored {len(paths)} paths")
 
             # Quantum Testing
             if verbose:
