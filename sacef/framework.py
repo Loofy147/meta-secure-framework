@@ -7,6 +7,7 @@ from sacef.modules.genetic_fuzzer import GeneticFuzzer
 from sacef.modules.symbolic_path_explorer import SymbolicPathExplorer
 from sacef.modules.quantum_superposition_tester import QuantumSuperpositionTester
 from sacef.modules.ml_vulnerability_predictor import MLVulnerabilityPredictor
+from sacef.modules.mutation_advisor import MutationAdvisor
 from sacef.self_attack import SelfAttackModule
 
 
@@ -49,6 +50,11 @@ class SelfAdversarialFramework:
             stats['predicted_risk'] = predicted
             if verbose:
                 print(f"  Predicted risk: {predicted:.1%}")
+
+            # Create the feedback loop
+            mutation_strategies = self.ml_predictor.predict_mutation_strategy(features)
+            advisor = MutationAdvisor(mutation_strategies)
+            self.genetic_fuzzer.advisor = advisor # Inject the advisor into the fuzzer
 
             # Hybrid Fuzzing Loop (Concolic Execution)
             if verbose:
