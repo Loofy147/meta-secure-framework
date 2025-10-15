@@ -3,13 +3,16 @@ import time
 from typing import Callable, List, Dict, Any, Tuple, Optional
 from sacef.core.context import TargetFunctionContext
 
+from sacef.modules.mutation_advisor import MutationAdvisor
+
 class GeneticFuzzer:
     """Genetic fuzzer with self-attack protection."""
 
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Dict[str, Any] = None, advisor: MutationAdvisor = None):
         if config is None:
             config = {}
 
+        self.advisor = advisor
         self.population_size = max(5, min(config.get('population_size', 30), 100))
         self.mutation_rate = max(0.0, min(config.get('mutation_rate', 0.3), 1.0))
         self.max_evaluations = config.get('max_evaluations', 10000)
@@ -66,42 +69,32 @@ class GeneticFuzzer:
         if random.random() > self.mutation_rate:
             return payload
 
+        # Consult the MutationAdvisor for a mutation strategy
+        if self.advisor:
+            operator = self.advisor.get_mutation_operator()
+            try:
+                return operator(payload)
+            except Exception:
+                return payload # Fallback on error
+
+        # Fallback to the original random mutation logic if no advisor is present
         try:
             if isinstance(payload, int):
-                # SAFE: Prevent overflow in mutation itself
-                if abs(payload) > 10**10:
-                    return payload  # Don't mutate already large values
-
-                ops = [
-                    lambda x: x * 2 if abs(x) < 10**8 else x,
-                    lambda x: x + 1,
-                    lambda x: -x,
-                ]
+                if abs(payload) > 10**10: return payload
+                ops = [lambda x: x * 2 if abs(x) < 10**8 else x, lambda x: x + 1, lambda x: -x]
                 return random.choice(ops)(payload)
-
             elif isinstance(payload, str):
-                # SAFE: Prevent memory exhaustion
-                if len(payload) > 1000:
-                    return payload  # Don't grow already large strings
-
+                if len(payload) > 1000: return payload
                 return random.choice([
-                    payload * 2 if len(payload) < 50 else payload,
-                    payload + "\x00",
-                    payload.upper() if payload else "X",
-                    "",
-                    f"eval({repr(payload)})",
-                    f"exec({repr(payload)})",
-                    random.choice(self.code_injection_payloads),
+                    payload * 2 if len(payload) < 50 else payload, payload + "\x00",
+                    payload.upper() if payload else "X", "", f"eval({repr(payload)})",
+                    f"exec({repr(payload)})", random.choice(self.code_injection_payloads),
                 ])
-
             elif isinstance(payload, list):
-                # SAFE: Limit list growth
-                if len(payload) > 100:
-                    return payload
+                if len(payload) > 100: return payload
                 return payload * min(2, 3)
-
         except Exception:
-            return payload  # Safe fallback
+            return payload
 
         return payload
 
