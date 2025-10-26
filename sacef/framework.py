@@ -1,4 +1,5 @@
 import time
+import logging
 from typing import Callable, Dict, Any
 
 from sacef.core.context import TargetFunctionContext
@@ -18,6 +19,7 @@ class SelfAdversarialFramework:
         if config is None:
             config = {}
 
+        self.logger = logging.getLogger('sacef')
         self.genetic_fuzzer = GeneticFuzzer(config.get('genetic_fuzzer'))
         self.symbolic_explorer = SymbolicPathExplorer()
         self.probabilistic_fuzzer = ProbabilisticFuzzer()
@@ -27,12 +29,9 @@ class SelfAdversarialFramework:
         self.vulnerabilities = []
         self.test_results = []
 
-    def analyze_function(self, func: Callable, context: TargetFunctionContext = None, verbose: bool = True) -> Dict:
+    def analyze_function(self, func: Callable, context: TargetFunctionContext = None) -> Dict:
         """Analyze a function."""
-        if verbose:
-            print(f"\n{'='*70}")
-            print(f"🔍 Analyzing: {func.__name__}")
-            print(f"{'='*70}")
+        self.logger.info(f"Starting analysis of function: {func.__name__}")
 
         # Reset the fuzzer's state for the new analysis
         self.genetic_fuzzer.reset()
@@ -43,13 +42,11 @@ class SelfAdversarialFramework:
 
         try:
             # ML Prediction
-            if verbose:
-                print("\n[1/4] 🤖 ML Prediction")
+            self.logger.info("Performing ML prediction...")
             features = self.ml_predictor.extract_features(func)
             predicted = self.ml_predictor.predict_score(features)
             stats['predicted_risk'] = predicted
-            if verbose:
-                print(f"  Predicted risk: {predicted:.1%}")
+            self.logger.info(f"Predicted risk: {predicted:.1%}")
 
             # Create the feedback loop
             mutation_strategies = self.ml_predictor.predict_mutation_strategy(features)
@@ -57,8 +54,7 @@ class SelfAdversarialFramework:
             self.genetic_fuzzer.advisor = advisor # Inject the advisor into the fuzzer
 
             # Hybrid Fuzzing Loop (Concolic Execution)
-            if verbose:
-                print("\n[2/4] 🧬 Hybrid Fuzzing (Concolic Execution)")
+            self.logger.info("Starting hybrid fuzzing (concolic execution)...")
 
             try:
                 # Initial fuzzing to get interesting seeds
@@ -82,19 +78,16 @@ class SelfAdversarialFramework:
                         continue
 
                 if new_inputs:
-                    if verbose:
-                        print(f"  Concolic engine found new input: {new_inputs}")
+                    self.logger.info(f"Concolic engine found new input: {new_inputs}")
                     # Add the new, path-aware input to the fuzzer's population
                     self.genetic_fuzzer.add_to_population(new_inputs)
             except Exception as e:
-                if verbose:
-                    print(f"  ⚠️ Concolic exploration failed: {e}")
+                self.logger.warning(f"Concolic exploration failed: {e}")
 
             # Run the genetic fuzzer with the (potentially) enriched population
             evolved = self.genetic_fuzzer.evolve(func, context=context, generations=3)
             stats['attacks_found'] = len(evolved)
-            if verbose:
-                print(f"  Found {len(evolved)} attacks")
+            self.logger.info(f"Genetic fuzzer found {len(evolved)} potential attacks.")
 
             for payload, fitness in evolved:
                 if fitness > 40:
@@ -116,17 +109,14 @@ class SelfAdversarialFramework:
                     vulns.append(vuln)
 
             # Probabilistic Fuzzing
-            if verbose:
-                print("\n[4/4] 🎲 Probabilistic Fuzzing")
-
+            self.logger.info("Starting probabilistic fuzzing...")
             type_distribution = {int: 0.4, str: 0.4, type(None): 0.1, bool: 0.1}
             fuzz_results = self.probabilistic_fuzzer.fuzz(func, type_distribution, context=context)
-
-            if verbose:
-                print(f"  Fuzzed {self.probabilistic_fuzzer.fuzz_iterations} inputs")
+            self.logger.info(f"Fuzzed {self.probabilistic_fuzzer.fuzz_iterations} inputs.")
 
             for type_name, data in fuzz_results.items():
                 if data.get('failure', 0) > 0:
+                    self.logger.warning(f"Probabilistic fuzzer found {data['failure']} failures for type: {type_name}")
                     vuln = Vulnerability(
                         attack_vector=AttackVector.TYPE_CONFUSION,
                         severity=min(0.2 + (data['failure'] / self.probabilistic_fuzzer.fuzz_iterations), 0.8),
@@ -144,8 +134,7 @@ class SelfAdversarialFramework:
             self.vulnerabilities.extend(vulns)
 
         except Exception as e:
-            if verbose:
-                print(f"\n❌ Error: {e}")
+            self.logger.error(f"An unexpected error occurred during analysis: {e}", exc_info=True)
 
         result = {
             'function': func.__name__,
@@ -155,8 +144,6 @@ class SelfAdversarialFramework:
         }
 
         self.test_results.append(result)
-
-        if verbose:
-            print(f"\n✅ Complete: {len(vulns)} vulnerabilities found")
+        self.logger.info(f"Analysis of {func.__name__} complete. Found {len(vulns)} vulnerabilities.")
 
         return result
