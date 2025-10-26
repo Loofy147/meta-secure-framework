@@ -39,3 +39,15 @@ class Vulnerability:
             self.severity_level = SeverityLevel.MEDIUM
         else:
             self.severity_level = SeverityLevel.LOW
+
+    def to_dict(self):
+        """Converts the vulnerability to a dictionary for JSON serialization."""
+        return {
+            "attack_vector": self.attack_vector.name,
+            "severity": self.severity,
+            "severity_level": self.severity_level.name,
+            "exploit_code": self.exploit_code,
+            "failure_trace": self.failure_trace,
+            "discovered_at": self.discovered_at,
+            "patch_suggestions": self.patch_suggestions,
+        }
