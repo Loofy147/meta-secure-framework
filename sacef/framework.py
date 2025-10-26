@@ -5,7 +5,7 @@ from sacef.core.context import TargetFunctionContext
 from sacef.core.datastructures import Vulnerability, AttackVector, SeverityLevel
 from sacef.modules.genetic_fuzzer import GeneticFuzzer
 from sacef.modules.symbolic_path_explorer import SymbolicPathExplorer
-from sacef.modules.quantum_superposition_tester import QuantumSuperpositionTester
+from sacef.modules.probabilistic_fuzzer import ProbabilisticFuzzer
 from sacef.modules.ml_vulnerability_predictor import MLVulnerabilityPredictor
 from sacef.modules.mutation_advisor import MutationAdvisor
 from sacef.self_attack import SelfAttackModule
@@ -20,7 +20,7 @@ class SelfAdversarialFramework:
 
         self.genetic_fuzzer = GeneticFuzzer(config.get('genetic_fuzzer'))
         self.symbolic_explorer = SymbolicPathExplorer()
-        self.quantum_tester = QuantumSuperpositionTester()
+        self.probabilistic_fuzzer = ProbabilisticFuzzer()
         self.ml_predictor = MLVulnerabilityPredictor(config.get('ml_predictor'))
         self.self_attacker = SelfAttackModule(self)
 
@@ -101,7 +101,7 @@ class SelfAdversarialFramework:
                     attack_vector = AttackVector.LOGIC_BYPASS
                     if fitness > 90:
                         attack_vector = AttackVector.CODE_INJECTION
-                    elif fitness > 60:
+                    elif fitness > 75:
                         attack_vector = AttackVector.OVERFLOW
 
                     vuln = Vulnerability(
@@ -115,22 +115,24 @@ class SelfAdversarialFramework:
                     )
                     vulns.append(vuln)
 
-            # Quantum Testing
+            # Probabilistic Fuzzing
             if verbose:
-                print("\n[4/4] ⚛️  Quantum Testing")
-            superposition = self.quantum_tester.create_input_superposition([int, str, type(None)])
-            collapsed = self.quantum_tester.collapse_superposition(func, superposition, context=context)
-            if verbose:
-                print(f"  {len(collapsed)} states collapsed")
+                print("\n[4/4] 🎲 Probabilistic Fuzzing")
 
-            for state_name, data in collapsed.items():
+            type_distribution = {int: 0.4, str: 0.4, type(None): 0.1, bool: 0.1}
+            fuzz_results = self.probabilistic_fuzzer.fuzz(func, type_distribution, context=context)
+
+            if verbose:
+                print(f"  Fuzzed {self.probabilistic_fuzzer.fuzz_iterations} inputs")
+
+            for type_name, data in fuzz_results.items():
                 if data.get('failure', 0) > 0:
                     vuln = Vulnerability(
                         attack_vector=AttackVector.TYPE_CONFUSION,
-                        severity=0.6,
+                        severity=min(0.2 + (data['failure'] / self.probabilistic_fuzzer.fuzz_iterations), 0.8),
                         severity_level=SeverityLevel.HIGH,
-                        exploit_code=f"State: {state_name}",
-                        failure_trace=[f"{data['failure']} failures"],
+                        exploit_code=f"Type: {type_name}",
+                        failure_trace=[f"{data['failure']} failures out of {data['success'] + data['failure']} attempts"],
                         discovered_at=time.time(),
                         patch_suggestions=["Add type checking"]
                     )
