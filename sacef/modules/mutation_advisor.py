@@ -1,4 +1,4 @@
-from typing import List, Callable, Any
+from typing import List, Callable, Any, Dict
 import random
 
 class MutationAdvisor:
