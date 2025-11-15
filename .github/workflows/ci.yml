@@ -7,9 +7,34 @@ on:
     branches: [ "main" ]
 
 jobs:
+  governance-checks:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Value Justification Gate
+      env:
+        PR_BODY: ${{ github.event.pull_request.body }}
+      run: |
+        python scripts/check_value_justification.py
+
+    - name: Security Sign-Off Gate
+      env:
+        PR_BODY: ${{ github.event.pull_request.body }}
+      run: |
+        python scripts/check_security_signoff.py
+
+    - name: Automated Cost Remediation
+      run: |
+        python scripts/simulate_cost_remediation.py
+        if [ -f P1_COST_REMEDIATION_TASK.md ]; then
+          echo "P1 Cost Remediation Task was created. Failing the build."
+          exit 1
+        fi
+
   build:
     runs-on: ubuntu-latest
-
+    needs: governance-checks
     steps:
     - uses: actions/checkout@v3
 
